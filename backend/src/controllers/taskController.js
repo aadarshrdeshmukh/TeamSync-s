@@ -165,7 +165,7 @@ const updateTask = async (request, response) => {
         const team = await Team.findById(task.teamId);
         const isCreator = task.createdBy.toString() === request.user.userId.toString();
         const isAssigned = task.assignedTo && task.assignedTo.toString() === request.user.userId.toString();
-        const isLead = team.members.some(m => 
+        const isLead = team && team.members && team.members.some(m => 
             m.userId.toString() === request.user.userId.toString() && m.role === 'LEAD'
         );
 
@@ -229,7 +229,7 @@ const deleteTask = async (request, response) => {
         // Check if user is task creator or team lead or admin
         const team = await Team.findById(task.teamId);
         const isCreator = task.createdBy.toString() === request.user.userId.toString();
-        const isLead = team.members.some(m => 
+        const isLead = team && team.members && team.members.some(m => 
             m.userId.toString() === request.user.userId.toString() && m.role === 'LEAD'
         );
 

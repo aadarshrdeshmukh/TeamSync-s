@@ -66,7 +66,7 @@ const AdminFiles = () => {
 
     try {
       // Simulate file upload (in real app, you'd upload to cloud storage)
-      const fileUrl = `https://teamsync-files.s3.amazonaws.com/${Date.now()}-${formData.file.name}`
+      const fileUrl = `placeholder://files/${Date.now()}-${formData.file.name}`
       
       await uploadFile({
         fileName: formData.fileName || formData.file.name,
@@ -325,15 +325,13 @@ const AdminFiles = () => {
                   </button>
                 )}
                 
-                <a
-                  href={file.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => handleDownloadFile(file._id, file.fileName)}
                   className="w-full glass-button py-2 px-3 text-sm flex items-center justify-center"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Download
-                </a>
+                </button>
               </div>
             </div>
           </Card>

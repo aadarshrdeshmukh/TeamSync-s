@@ -61,7 +61,7 @@ const uploadFile = async (request, response) => {
         }
 
         // Check if user is member of the team or admin
-        const isMember = team.members.some(m => m.userId.toString() === request.user.userId.toString());
+        const isMember = team.members && team.members.some(m => m.userId.toString() === request.user.userId.toString());
         const isCreator = team.createdBy.toString() === request.user.userId.toString();
         const isAdmin = request.user.role === 'ADMIN';
 
@@ -139,6 +139,111 @@ const updateFile = async (request, response) => {
     }
 };
 
+// Download file
+const downloadFile = async (request, response) => {
+    try {
+        const file = await File.findById(request.params.id);
+        if (!file) {
+            return response.status(404).json({ message: "File not found" });
+        }
+
+        // Check if user has access to the file
+        const isUploader = file.uploadedBy.toString() === request.user.userId.toString();
+        const isAdmin = request.user.role === 'ADMIN';
+        
+        // Check if user is team member (with null safety)
+        let isTeamMember = false;
+        try {
+            const team = await Team.findById(file.teamId);
+            if (team && team.members) {
+                isTeamMember = team.members.some(m => 
+                    m.userId.toString() === request.user.userId.toString()
+                ) || team.createdBy.toString() === request.user.userId.toString();
+            }
+        } catch (teamError) {
+            console.warn(`Team lookup failed for file ${file._id}:`, teamError.message);
+        }
+
+        if (!isUploader && !isTeamMember && !isAdmin) {
+            return response.status(403).json({ message: "Access denied. You don't have permission to download this file" });
+        }
+
+        // For demo purposes, return file info with a simulated download
+        // In a real app, you would redirect to the actual file URL or stream the file
+        response.status(200).json({
+            message: "File download initiated",
+            file: {
+                fileName: file.fileName,
+                fileSize: file.fileSize,
+                fileType: file.fileType,
+                downloadUrl: `/api/files/${file._id}/content`, // Simulated download URL
+                originalUrl: file.fileUrl
+            }
+        });
+
+    } catch (error) {
+        console.error('Download file error:', error);
+        response.status(500).json({ message: error.message });
+    }
+};
+
+// Get file content (simulated download)
+const getFileContent = async (request, response) => {
+    try {
+        const file = await File.findById(request.params.id);
+        if (!file) {
+            return response.status(404).json({ message: "File not found" });
+        }
+
+        // Check permissions (same as download)
+        const isUploader = file.uploadedBy.toString() === request.user.userId.toString();
+        const isAdmin = request.user.role === 'ADMIN';
+        
+        let isTeamMember = false;
+        try {
+            const team = await Team.findById(file.teamId);
+            if (team && team.members) {
+                isTeamMember = team.members.some(m => 
+                    m.userId.toString() === request.user.userId.toString()
+                ) || team.createdBy.toString() === request.user.userId.toString();
+            }
+        } catch (teamError) {
+            console.warn(`Team lookup failed for file ${file._id}:`, teamError.message);
+        }
+
+        if (!isUploader && !isTeamMember && !isAdmin) {
+            return response.status(403).json({ message: "Access denied" });
+        }
+
+        // Simulate file content for demo
+        const simulatedContent = `This is a simulated file content for: ${file.fileName}
+        
+File Details:
+- Name: ${file.fileName}
+- Type: ${file.fileType}
+- Size: ${file.fileSize} bytes
+- Uploaded by: ${file.uploadedBy}
+- Team: ${file.teamId}
+- Description: ${file.description || 'No description'}
+
+In a real application, this would be the actual file content from cloud storage.
+For now, this serves as a demonstration of the download functionality.
+
+TeamSync File Management System - Demo Content`;
+
+        // Set appropriate headers for file download
+        response.setHeader('Content-Disposition', `attachment; filename="${file.fileName}"`);
+        response.setHeader('Content-Type', file.fileType || 'application/octet-stream');
+        response.setHeader('Content-Length', Buffer.byteLength(simulatedContent));
+        
+        response.status(200).send(simulatedContent);
+
+    } catch (error) {
+        console.error('Get file content error:', error);
+        response.status(500).json({ message: error.message });
+    }
+};
+
 // Delete file
 const deleteFile = async (request, response) => {
     try {
@@ -147,21 +252,36 @@ const deleteFile = async (request, response) => {
             return response.status(404).json({ message: "File not found" });
         }
 
-        // Check if user is uploader or team lead or admin
-        const team = await Team.findById(file.teamId);
+        // Check permissions
         const isUploader = file.uploadedBy.toString() === request.user.userId.toString();
-        const isLead = team.members.some(m => 
-            m.userId.toString() === request.user.userId.toString() && m.role === 'LEAD'
-        );
+        const isAdmin = request.user.role === 'ADMIN';
+        
+        // Check if user is team lead (with null safety)
+        let isLead = false;
+        try {
+            const team = await Team.findById(file.teamId);
+            if (team && team.members) {
+                isLead = team.members.some(m => 
+                    m.userId.toString() === request.user.userId.toString() && m.role === 'LEAD'
+                );
+            }
+        } catch (teamError) {
+            // If team lookup fails, continue with other permission checks
+            console.warn(`Team lookup failed for file ${file._id}:`, teamError.message);
+        }
 
-        if (!isUploader && !isLead && request.user.role !== 'ADMIN') {
+        if (!isUploader && !isLead && !isAdmin) {
             return response.status(403).json({ message: "Access denied. Only uploader, team lead, or admin can delete" });
         }
 
+        // Note: In a real application, you would also delete the physical file from cloud storage
+
+        // Delete from database
         await File.findByIdAndDelete(request.params.id);
 
         response.status(200).json({ message: "File deleted successfully" });
     } catch (error) {
+        console.error('Delete file error:', error);
         response.status(500).json({ message: error.message });
     }
 };
@@ -172,5 +292,7 @@ module.exports = {
     getFileById,
     uploadFile,
     updateFile,
+    downloadFile,
+    getFileContent,
     deleteFile
 };

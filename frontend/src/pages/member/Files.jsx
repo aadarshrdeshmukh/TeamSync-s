@@ -63,7 +63,7 @@ const MemberFiles = () => {
 
     try {
       // Simulate file upload (in real app, you'd upload to cloud storage)
-      const fileUrl = `https://teamsync-files.s3.amazonaws.com/${Date.now()}-${formData.file.name}`
+      const fileUrl = `placeholder://files/${Date.now()}-${formData.file.name}`
       
       await uploadFile({
         fileName: formData.fileName || formData.file.name,
@@ -79,6 +79,47 @@ const MemberFiles = () => {
       refetch()
     } catch (error) {
       console.error('Failed to upload file:', error)
+    }
+  }
+
+  const handleDownloadFile = async (fileId, fileName) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        alert('Authentication required. Please log in again.')
+        return
+      }
+
+      const response = await fetch(`/api/files/${fileId}/content`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Download failed')
+      }
+
+      // Get the file content as blob
+      const blob = await response.blob()
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      
+      // Cleanup
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Download failed:', error)
+      alert(`Download failed: ${error.message}`)
     }
   }
 
@@ -248,15 +289,13 @@ const MemberFiles = () => {
                         </button>
                       )}
                       
-                      <a
-                        href={file.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <button
+                        onClick={() => handleDownloadFile(file._id, file.fileName)}
                         className="w-full glass-button py-2 px-3 text-sm flex items-center justify-center"
                       >
                         <Download className="w-4 h-4 mr-2" />
                         Download
-                      </a>
+                      </button>
                     </div>
                   </div>
                 </Card>

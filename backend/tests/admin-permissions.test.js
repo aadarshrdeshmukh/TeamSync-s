@@ -132,7 +132,7 @@ describe('ADMIN Role Permissions Analysis', () => {
           .send({ role: 'LEAD' })
           .expect(200);
 
-        expect(response.body.message).toBe('User role updated successfully');
+        expect(response.body.message).toBe('User role updated successfully. The user will need to log in again to access their new role.');
         expect(response.body.user.role).toBe('LEAD');
       });
 

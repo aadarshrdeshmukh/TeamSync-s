@@ -146,7 +146,7 @@ const updateMeeting = async (request, response) => {
         // Check if user is organizer, team lead, or admin
         const team = await Team.findById(meeting.teamId);
         const isOrganizer = meeting.organizer.toString() === request.user.userId.toString();
-        const isLead = team.members.some(m => 
+        const isLead = team && team.members && team.members.some(m => 
             m.userId.toString() === request.user.userId.toString() && m.role === 'LEAD'
         );
 
@@ -190,7 +190,7 @@ const deleteMeeting = async (request, response) => {
         // Check if user is organizer, team lead, or admin
         const team = await Team.findById(meeting.teamId);
         const isOrganizer = meeting.organizer.toString() === request.user.userId.toString();
-        const isLead = team.members.some(m => 
+        const isLead = team && team.members && team.members.some(m => 
             m.userId.toString() === request.user.userId.toString() && m.role === 'LEAD'
         );
 
@@ -216,7 +216,7 @@ const joinMeeting = async (request, response) => {
 
         // Check if user is part of the team or already a participant
         const team = await Team.findById(meeting.teamId);
-        const isTeamMember = team.members.some(m => 
+        const isTeamMember = team && team.members && team.members.some(m => 
             m.userId.toString() === request.user.userId.toString()
         );
         const isOrganizer = meeting.organizer.toString() === request.user.userId.toString();
